@@ -1,112 +1,164 @@
 """
-Module định nghĩa bài toán TSP (Travelling Salesman Problem)
+Module định nghĩa bài toán TSP (Traveling Salesman Problem)
+Bài toán người bán hàng - tìm đường đi ngắn nhất qua tất cả thành phố
 """
 import numpy as np
-import random
+from typing import List, Optional, Tuple
 
 
 class TSProblem:
-    """Lớp đại diện cho bài toán người du lịch"""
+    """
+    Class mô tả bài toán Traveling Salesman Problem
     
-    def __init__(self, num_cities=20, city_coords=None):
+    Attributes:
+        num_cities: Số lượng thành phố
+        city_coords: Mảng numpy chứa tọa độ (x, y) của các thành phố
+        distance_matrix: Ma trận khoảng cách giữa các cặp thành phố
+    """
+    
+    MIN_CITIES = 3
+    MAX_CITIES = 500
+    COORD_RANGE = 100.0
+    
+    def __init__(self, num_cities: int = 20, city_coords: Optional[np.ndarray] = None):
         """
         Khởi tạo bài toán TSP
         
         Args:
-            num_cities: Số lượng thành phố
-            city_coords: Tọa độ các thành phố (nếu có)
+            num_cities: Số thành phố cần tạo (mặc định 20)
+            city_coords: Tọa độ cho trước (nếu None sẽ tạo ngẫu nhiên)
+            
+        Raises:
+            ValueError: Nếu tham số không hợp lệ
         """
-        # Validate num_cities
-        if num_cities < 2:
-            raise ValueError(
-                f"Số thành phố phải >= 2, nhận được: {num_cities}\n\n"
-                f"Giải thích: Cần ít nhất 2 thành phố để tạo thành một tuyến đường."
-            )
-        if num_cities == 2:
-            raise ValueError(
-                f"Số thành phố = 2 không phù hợp\n\n"
-                f"Giải thích: Với 2 thành phố, chỉ có 1 cách duy nhất (A→B→A).\n"
-                f"Không cần thuật toán tối ưu hóa.\n\n"
-                f"Khuyến nghị: Sử dụng >= 3 thành phố."
-            )
-        if num_cities > 500:
-            raise ValueError(
-                f"Số thành phố quá lớn (> 500), nhận được: {num_cities}\n\n"
-                f"Giải thích: Số thành phố quá lớn sẽ:\n"
-                f"- Làm tăng thời gian tính toán rất nhiều\n"
-                f"- Tiêu tốn quá nhiều bộ nhớ\n"
-                f"- Có thể làm treo hoặc crash ứng dụng\n\n"
-                f"Khuyến nghị: Sử dụng <= 200 thành phố để đảm bảo hiệu suất tốt."
-            )
-        
-        self.num_cities = num_cities
+        self._validate_and_init(num_cities, city_coords)
+        self.distance_matrix = self._build_distance_matrix()
+    
+    def _validate_and_init(self, num_cities: int, city_coords: Optional[np.ndarray]) -> None:
+        """Kiểm tra tham số và khởi tạo tọa độ thành phố"""
         
         if city_coords is not None:
-            city_coords_array = np.array(city_coords)
-            # Validate city_coords
-            if len(city_coords_array.shape) != 2 or city_coords_array.shape[1] != 2:
-                raise ValueError("Tọa độ thành phố phải là mảng 2 chiều với shape (n, 2)")
-            if len(city_coords_array) < 3:
-                raise ValueError(f"Số lượng tọa độ phải >= 3, nhận được: {len(city_coords_array)}")
-            
-            self.city_coords = city_coords_array
-            self.num_cities = len(city_coords)
+            coords = np.asarray(city_coords)
+            self._check_coords_valid(coords)
+            self.city_coords = coords
+            self.num_cities = coords.shape[0]
         else:
-            # Tạo ngẫu nhiên tọa độ các thành phố trong khoảng [0, 100]
-            self.city_coords = np.random.rand(num_cities, 2) * 100
-        
-        # Tính ma trận khoảng cách
-        self.distance_matrix = self._calculate_distance_matrix()
+            self._check_num_cities_valid(num_cities)
+            self.num_cities = num_cities
+            self.city_coords = self._generate_random_coords()
     
-    def _calculate_distance_matrix(self):
-        """Tính ma trận khoảng cách giữa các thành phố"""
-        n = self.num_cities
-        dist_matrix = np.zeros((n, n))
-        
-        for i in range(n):
-            for j in range(i + 1, n):
-                dist = np.sqrt(
-                    (self.city_coords[i][0] - self.city_coords[j][0]) ** 2 +
-                    (self.city_coords[i][1] - self.city_coords[j][1]) ** 2
-                )
-                dist_matrix[i][j] = dist
-                dist_matrix[j][i] = dist
-        
-        return dist_matrix
+    def _check_num_cities_valid(self, n: int) -> None:
+        """Kiểm tra số thành phố có hợp lệ không"""
+        if n < self.MIN_CITIES:
+            raise ValueError(
+                f"Cần tối thiểu {self.MIN_CITIES} thành phố, nhận được: {n}\n"
+                f"Lý do: Với ít hơn 3 thành phố, bài toán không có ý nghĩa tối ưu."
+            )
+        if n > self.MAX_CITIES:
+            raise ValueError(
+                f"Tối đa {self.MAX_CITIES} thành phố, nhận được: {n}\n"
+                f"Lý do: Số thành phố lớn sẽ gây tốn tài nguyên và thời gian."
+            )
     
-    def calculate_route_distance(self, route):
+    def _check_coords_valid(self, coords: np.ndarray) -> None:
+        """Kiểm tra tọa độ có hợp lệ không"""
+        if coords.ndim != 2 or coords.shape[1] != 2:
+            raise ValueError(
+                f"Tọa độ phải có shape (n, 2), nhận được: {coords.shape}"
+            )
+        if coords.shape[0] < self.MIN_CITIES:
+            raise ValueError(
+                f"Cần tối thiểu {self.MIN_CITIES} thành phố, nhận được: {coords.shape[0]}"
+            )
+    
+    def _generate_random_coords(self) -> np.ndarray:
+        """Sinh tọa độ ngẫu nhiên cho các thành phố"""
+        return np.random.uniform(0, self.COORD_RANGE, size=(self.num_cities, 2))
+    
+    def _build_distance_matrix(self) -> np.ndarray:
         """
-        Tính tổng khoảng cách của một tuyến đường
+        Xây dựng ma trận khoảng cách Euclidean
+        Sử dụng broadcasting để tính nhanh hơn
+        """
+        # Tính khoảng cách dùng broadcasting (nhanh hơn vòng lặp)
+        diff = self.city_coords[:, np.newaxis, :] - self.city_coords[np.newaxis, :, :]
+        return np.sqrt(np.sum(diff ** 2, axis=2))
+    
+    def calculate_route_distance(self, route: List[int]) -> float:
+        """
+        Tính tổng độ dài của một tuyến đường
         
         Args:
-            route: Danh sách thứ tự các thành phố
+            route: Danh sách chỉ số thành phố theo thứ tự đi
             
         Returns:
-            Tổng khoảng cách
+            Tổng khoảng cách của tuyến đường (bao gồm quay về điểm đầu)
+            
+        Raises:
+            ValueError: Nếu tuyến đường không hợp lệ
         """
-        # Validate route
-        if not route or len(route) == 0:
-            raise ValueError("Tuyến đường không được rỗng")
-        if len(route) != self.num_cities:
-            raise ValueError(f"Độ dài tuyến đường ({len(route)}) phải bằng số thành phố ({self.num_cities})")
-        if len(set(route)) != len(route):
-            raise ValueError("Tuyến đường chứa thành phố trùng lặp")
-        if min(route) < 0 or max(route) >= self.num_cities:
-            raise ValueError(f"Chỉ số thành phố phải trong khoảng [0, {self.num_cities-1}]")
+        self._validate_route(route)
         
-        total_distance = 0
-        for i in range(len(route)):
-            city1 = route[i]
-            city2 = route[(i + 1) % len(route)]
-            total_distance += self.distance_matrix[city1][city2]
-        return total_distance
+        # Tính tổng khoảng cách
+        route_arr = np.array(route)
+        next_cities = np.roll(route_arr, -1)  # Dịch sang trái 1 vị trí
+        
+        return np.sum(self.distance_matrix[route_arr, next_cities])
     
-    def generate_random_route(self):
-        """Tạo một tuyến đường ngẫu nhiên"""
+    def _validate_route(self, route: List[int]) -> None:
+        """Kiểm tra tuyến đường có hợp lệ không"""
+        if not route:
+            raise ValueError("Tuyến đường rỗng")
+        
+        if len(route) != self.num_cities:
+            raise ValueError(
+                f"Tuyến đường cần {self.num_cities} thành phố, nhận được: {len(route)}"
+            )
+        
+        route_set = set(route)
+        if len(route_set) != len(route):
+            raise ValueError("Tuyến đường có thành phố trùng lặp")
+        
+        if min(route) < 0 or max(route) >= self.num_cities:
+            raise ValueError(
+                f"Chỉ số thành phố phải trong [0, {self.num_cities - 1}]"
+            )
+    
+    def generate_random_route(self) -> List[int]:
+        """
+        Tạo một tuyến đường ngẫu nhiên
+        
+        Returns:
+            Danh sách chỉ số thành phố được xáo trộn ngẫu nhiên
+        """
         route = list(range(self.num_cities))
-        random.shuffle(route)
+        np.random.shuffle(route)
         return route
     
-    def get_city_coords(self):
-        """Lấy tọa độ các thành phố"""
+    def get_city_coords(self) -> np.ndarray:
+        """
+        Lấy bản sao tọa độ các thành phố
+        
+        Returns:
+            Mảng numpy shape (num_cities, 2)
+        """
         return self.city_coords.copy()
+    
+    def get_distance(self, city1: int, city2: int) -> float:
+        """
+        Lấy khoảng cách giữa 2 thành phố
+        
+        Args:
+            city1: Chỉ số thành phố thứ nhất
+            city2: Chỉ số thành phố thứ hai
+            
+        Returns:
+            Khoảng cách Euclidean
+        """
+        return self.distance_matrix[city1, city2]
+    
+    def __repr__(self) -> str:
+        return f"TSProblem(num_cities={self.num_cities})"
+    
+    def __str__(self) -> str:
+        return f"Bài toán TSP với {self.num_cities} thành phố"
