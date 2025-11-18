@@ -117,6 +117,10 @@ class TSPApplication:
                                        command=self._stop_algorithm, state=tk.DISABLED)
         self.stop_button.grid(row=0, column=1, pady=5, padx=2)
         
+        self.export_button = ttk.Button(button_frame, text="Xuất kết quả", 
+                                        command=self._export_results, state=tk.DISABLED)
+        self.export_button.grid(row=1, column=0, columnspan=2, pady=5, padx=2, sticky=(tk.W, tk.E))
+        
         # Thanh tiến trình
         self.progress_var = tk.StringVar(value="Chưa chạy")
         ttk.Label(control_frame, textvariable=self.progress_var, 
@@ -512,6 +516,7 @@ class TSPApplication:
             # Hiển thị kết quả
             self.best_route = best_route
             self.best_distance = best_distance
+            self._last_run_time = end_time - start_time
             
             self.result_text.delete(1.0, tk.END)
             info = self.current_algorithm.get_algorithm_info()
@@ -519,11 +524,17 @@ class TSPApplication:
             self.result_text.insert(tk.END, f"\n{'='*35}\n")
             self.result_text.insert(tk.END, f"Khoảng cách tốt nhất: {best_distance:.2f}\n")
             self.result_text.insert(tk.END, f"Thời gian: {end_time - start_time:.2f}s\n")
+            self.result_text.insert(tk.END, f"Số thành phố: {len(best_route)}\n")
             self.result_text.insert(tk.END, f"\nTuyến đường:\n")
-            route_str = " -> ".join(map(str, best_route[:10]))
-            if len(best_route) > 10:
+            # Hiển thị tối đa 20 thành phố
+            route_str = " -> ".join(map(str, best_route[:20]))
+            if len(best_route) > 20:
                 route_str += " -> ..."
             self.result_text.insert(tk.END, f"{route_str}\n")
+            self.result_text.insert(tk.END, f"\nNhấn 'Xuất kết quả' để xem đầy đủ\n")
+            
+            # Kích hoạt nút xuất kết quả
+            self.export_button.config(state=tk.NORMAL)
             
             # Vẽ kết quả cuối cùng
             self._draw_map(best_route)
@@ -589,6 +600,7 @@ class TSPApplication:
         self.is_running = True
         self.run_button.config(state=tk.DISABLED)
         self.stop_button.config(state=tk.NORMAL)
+        self.export_button.config(state=tk.DISABLED)
         self.progress_var.set("Đang chạy...")
         
         # Chạy trong thread riêng để không block GUI
@@ -602,6 +614,234 @@ class TSPApplication:
         self.progress_var.set("Đã dừng")
         self.run_button.config(state=tk.NORMAL)
         self.stop_button.config(state=tk.DISABLED)
+    
+    def _export_results(self):
+        """Xuất kết quả chi tiết ra cửa sổ mới"""
+        if self.best_route is None or self.best_distance is None:
+            messagebox.showwarning(
+                "Cảnh báo",
+                "Chưa có kết quả để xuất.\n\nVui lòng chạy thuật toán trước!"
+            )
+            return
+        
+        # Tạo cửa sổ mới
+        export_window = tk.Toplevel(self.root)
+        export_window.title("Kết quả chi tiết")
+        export_window.geometry("900x700")
+        export_window.configure(bg='#f0f0f0')
+        
+        # Canvas với scrollbar cho toàn bộ nội dung
+        canvas = tk.Canvas(export_window, bg='#f0f0f0')
+        scrollbar = ttk.Scrollbar(export_window, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side="left", fill="both", expand=True, padx=10, pady=10)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Style cho các section
+        style_title = ('Arial', 16, 'bold')
+        style_header = ('Arial', 12, 'bold')
+        style_normal = ('Arial', 10)
+        style_mono = ('Courier New', 9)
+        
+        # Tiêu đề chính
+        title_frame = tk.Frame(scrollable_frame, bg='#2c3e50', pady=15)
+        title_frame.pack(fill=tk.X, pady=(0, 10))
+        tk.Label(title_frame, text="KẾT QUẢ GIẢI BÀI TOÁN TSP", 
+                font=('Arial', 18, 'bold'), fg='white', bg='#2c3e50').pack()
+        
+        # Thông tin bài toán
+        info_frame = tk.LabelFrame(scrollable_frame, text="📋 THÔNG TIN BÀI TOÁN", 
+                                   font=style_header, bg='white', padx=15, pady=10)
+        info_frame.pack(fill=tk.X, pady=5)
+        
+        tk.Label(info_frame, text=f"Số thành phố:", font=style_normal, bg='white', anchor='w').grid(row=0, column=0, sticky='w', pady=2)
+        tk.Label(info_frame, text=f"{self.tsp_problem.num_cities}", font=('Arial', 10, 'bold'), bg='white', fg='#2980b9').grid(row=0, column=1, sticky='w', padx=10)
+        
+        # Thông tin thuật toán
+        if self.current_algorithm:
+            algo_frame = tk.LabelFrame(scrollable_frame, text="⚙️ THUẬT TOÁN", 
+                                       font=style_header, bg='white', padx=15, pady=10)
+            algo_frame.pack(fill=tk.X, pady=5)
+            
+            info = self.current_algorithm.get_algorithm_info()
+            tk.Label(algo_frame, text=f"Tên thuật toán:", font=style_normal, bg='white', anchor='w').grid(row=0, column=0, sticky='w', pady=2)
+            tk.Label(algo_frame, text=f"{info.get('name', 'N/A')}", font=('Arial', 10, 'bold'), bg='white', fg='#27ae60').grid(row=0, column=1, sticky='w', padx=10)
+            
+            # Tham số
+            param_frame = tk.LabelFrame(scrollable_frame, text="🔧 THAM SỐ THUẬT TOÁN", 
+                                        font=style_header, bg='white', padx=15, pady=10)
+            param_frame.pack(fill=tk.X, pady=5)
+            
+            algorithm_type = self.algorithm_var.get()
+            row = 0
+            if algorithm_type == "SA":
+                params = [
+                    ("Nhiệt độ ban đầu:", self.sa_temp_var.get()),
+                    ("Tốc độ làm nguội:", self.sa_cooling_var.get()),
+                    ("Số vòng lặp:", self.sa_iterations_var.get())
+                ]
+            else:  # WOA
+                params = [
+                    ("Số cá voi:", self.woa_whales_var.get()),
+                    ("Số vòng lặp:", self.woa_iterations_var.get()),
+                    ("Hằng số spiral (b):", self.woa_b_var.get()),
+                    ("Giá trị a_max:", self.woa_a_var.get())
+                ]
+            
+            for label, value in params:
+                tk.Label(param_frame, text=label, font=style_normal, bg='white', anchor='w').grid(row=row, column=0, sticky='w', pady=2)
+                tk.Label(param_frame, text=str(value), font=('Arial', 10, 'bold'), bg='white', fg='#8e44ad').grid(row=row, column=1, sticky='w', padx=10)
+                row += 1
+        
+        # Kết quả
+        result_frame = tk.LabelFrame(scrollable_frame, text="🎯 KẾT QUẢ", 
+                                     font=style_header, bg='#ecf0f1', padx=15, pady=10)
+        result_frame.pack(fill=tk.X, pady=5)
+        
+        tk.Label(result_frame, text="Khoảng cách tốt nhất:", font=style_normal, bg='#ecf0f1', anchor='w').grid(row=0, column=0, sticky='w', pady=2)
+        tk.Label(result_frame, text=f"{self.best_distance:.2f}", font=('Arial', 14, 'bold'), bg='#ecf0f1', fg='#e74c3c').grid(row=0, column=1, sticky='w', padx=10)
+        
+        if hasattr(self, '_last_run_time'):
+            tk.Label(result_frame, text="Thời gian chạy:", font=style_normal, bg='#ecf0f1', anchor='w').grid(row=1, column=0, sticky='w', pady=2)
+            tk.Label(result_frame, text=f"{self._last_run_time:.2f} giây", font=('Arial', 11, 'bold'), bg='#ecf0f1', fg='#16a085').grid(row=1, column=1, sticky='w', padx=10)
+        
+        # Tuyến đường
+        route_frame = tk.LabelFrame(scrollable_frame, text="🗺️ TUYẾN ĐƯỜNG ĐẦY ĐỦ", 
+                                    font=style_header, bg='white', padx=15, pady=10)
+        route_frame.pack(fill=tk.BOTH, expand=True, pady=5)
+        
+        # Text widget với scrollbar cho tuyến đường
+        route_text_frame = tk.Frame(route_frame, bg='white')
+        route_text_frame.pack(fill=tk.BOTH, expand=True)
+        
+        route_scroll = ttk.Scrollbar(route_text_frame)
+        route_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        route_text = tk.Text(route_text_frame, height=8, wrap=tk.WORD, 
+                            font=style_mono, yscrollcommand=route_scroll.set,
+                            bg='#fafafa', relief=tk.FLAT, padx=10, pady=10)
+        route_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        route_scroll.config(command=route_text.yview)
+        
+        # Hiển thị tuyến đường
+        route = self.best_route
+        route_lines = []
+        for i in range(0, len(route), 10):
+            chunk = route[i:i+10]
+            route_str = " → ".join(map(str, chunk))
+            if i + 10 < len(route):
+                route_str += " →"
+            route_lines.append(route_str)
+        route_lines.append(f" → {route[0]} (quay về điểm xuất phát)")
+        route_lines.append("")
+        route_lines.append(f"Tổng cộng: {len(route)} thành phố")
+        
+        route_text.insert(tk.END, "\n".join(route_lines))
+        route_text.config(state=tk.DISABLED)
+        
+        # Thống kê hội tụ
+        if self.current_algorithm and hasattr(self.current_algorithm, 'history'):
+            history = self.current_algorithm.history
+            if len(history) > 0:
+                stats_frame = tk.LabelFrame(scrollable_frame, text="📊 THỐNG KÊ QUÁ TRÌNH HỘI TỤ", 
+                                           font=style_header, bg='white', padx=15, pady=10)
+                stats_frame.pack(fill=tk.X, pady=5)
+                
+                stats_data = [
+                    ("Số vòng lặp thực tế:", len(history)),
+                    ("Khoảng cách ban đầu:", f"{history[0][1]:.2f}"),
+                    ("Khoảng cách cuối cùng:", f"{history[-1][1]:.2f}"),
+                ]
+                
+                row = 0
+                for label, value in stats_data:
+                    tk.Label(stats_frame, text=label, font=style_normal, bg='white', anchor='w').grid(row=row, column=0, sticky='w', pady=2)
+                    tk.Label(stats_frame, text=str(value), font=('Arial', 10, 'bold'), bg='white', fg='#34495e').grid(row=row, column=1, sticky='w', padx=10)
+                    row += 1
+                
+                improvement = ((history[0][1] - history[-1][1]) / history[0][1]) * 100
+                tk.Label(stats_frame, text="Cải thiện:", font=style_normal, bg='white', anchor='w').grid(row=row, column=0, sticky='w', pady=2)
+                improvement_label = tk.Label(stats_frame, text=f"{improvement:.2f}%", font=('Arial', 12, 'bold'), bg='white', fg='#27ae60')
+                improvement_label.grid(row=row, column=1, sticky='w', padx=10)
+        
+        # Chuẩn bị nội dung text để export
+        content = []
+        content.append("=" * 80)
+        content.append("KẾT QUẢ GIẢI BÀI TOÁN TRAVELLING SALESMAN PROBLEM")
+        content.append("=" * 80)
+        content.append("")
+        content.append(f"Số thành phố: {self.tsp_problem.num_cities}")
+        
+        if self.current_algorithm:
+            info = self.current_algorithm.get_algorithm_info()
+            content.append(f"\nThuật toán: {info.get('name', 'N/A')}")
+            
+            algorithm_type = self.algorithm_var.get()
+            content.append("\nTham số:")
+            if algorithm_type == "SA":
+                content.append(f"  - Nhiệt độ ban đầu: {self.sa_temp_var.get()}")
+                content.append(f"  - Tốc độ làm nguội: {self.sa_cooling_var.get()}")
+                content.append(f"  - Số vòng lặp: {self.sa_iterations_var.get()}")
+            else:
+                content.append(f"  - Số cá voi: {self.woa_whales_var.get()}")
+                content.append(f"  - Số vòng lặp: {self.woa_iterations_var.get()}")
+                content.append(f"  - Hằng số spiral (b): {self.woa_b_var.get()}")
+                content.append(f"  - Giá trị a_max: {self.woa_a_var.get()}")
+        
+        content.append(f"\nKhoảng cách tốt nhất: {self.best_distance:.2f}")
+        if hasattr(self, '_last_run_time'):
+            content.append(f"Thời gian chạy: {self._last_run_time:.2f} giây")
+        
+        content.append("\nTuyến đường:")
+        content.extend(route_lines)
+        
+        if self.current_algorithm and hasattr(self.current_algorithm, 'history'):
+            history = self.current_algorithm.history
+            if len(history) > 0:
+                content.append(f"\nSố vòng lặp thực tế: {len(history)}")
+                content.append(f"Khoảng cách ban đầu: {history[0][1]:.2f}")
+                content.append(f"Khoảng cách cuối cùng: {history[-1][1]:.2f}")
+                improvement = ((history[0][1] - history[-1][1]) / history[0][1]) * 100
+                content.append(f"Cải thiện: {improvement:.2f}%")
+        
+        content.append("\n" + "=" * 80)
+        
+        # Nút sao chép và lưu file
+        button_frame = ttk.Frame(export_window)
+        button_frame.pack(fill=tk.X, padx=10, pady=10)
+        
+        def copy_to_clipboard():
+            self.root.clipboard_clear()
+            self.root.clipboard_append("\n".join(content))
+            messagebox.showinfo("Thành công", "Đã sao chép kết quả vào clipboard!")
+        
+        def save_to_file():
+            from tkinter import filedialog
+            file_path = filedialog.asksaveasfilename(
+                defaultextension=".txt",
+                filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
+                initialfile="ket_qua_tsp.txt"
+            )
+            if file_path:
+                try:
+                    with open(file_path, 'w', encoding='utf-8') as f:
+                        f.write("\n".join(content))
+                    messagebox.showinfo("Thành công", f"Đã lưu kết quả vào:\n{file_path}")
+                except Exception as e:
+                    messagebox.showerror("Lỗi", f"Không thể lưu file:\n{str(e)}")
+        
+        ttk.Button(button_frame, text="Sao chép", command=copy_to_clipboard).pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="Lưu file", command=save_to_file).pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="Đóng", command=export_window.destroy).pack(side=tk.RIGHT, padx=5)
 
 
 def main():
