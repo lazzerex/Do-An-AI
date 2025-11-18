@@ -53,7 +53,7 @@ class TSPApplication:
         
         ttk.Label(problem_frame, text="Số thành phố:").grid(row=0, column=0, sticky=tk.W, pady=2)
         self.num_cities_var = tk.IntVar(value=20)
-        ttk.Spinbox(problem_frame, from_=5, to=100, textvariable=self.num_cities_var, 
+        ttk.Spinbox(problem_frame, from_=3, to=500, textvariable=self.num_cities_var, 
                     width=15).grid(row=0, column=1, pady=2)
         
         ttk.Button(problem_frame, text="Tạo bài toán mới", 
@@ -159,16 +159,128 @@ class TSPApplication:
         self.root.columnconfigure(1, weight=1)
         self.root.rowconfigure(0, weight=1)
     
+    def _validate_input(self, value, param_name, min_val=None, max_val=None, data_type=int):
+        """
+        Validate input parameters
+        
+        Args:
+            value: Giá trị cần validate
+            param_name: Tên tham số (hiển thị trong thông báo lỗi)
+            min_val: Giá trị tối thiểu
+            max_val: Giá trị tối đa
+            data_type: Kiểu dữ liệu (int hoặc float)
+            
+        Returns:
+            True nếu hợp lệ, False nếu không
+        """
+        try:
+            # Kiểm tra kiểu dữ liệu
+            if data_type == int:
+                val = int(value)
+            else:
+                val = float(value)
+            
+            # Kiểm tra giá trị min
+            if min_val is not None and val < min_val:
+                messagebox.showerror(
+                    "Lỗi giá trị",
+                    f"Lỗi: {param_name} phải >= {min_val}\n\nBạn đã nhập: {val}"
+                )
+                return False
+            
+            # Kiểm tra giá trị max
+            if max_val is not None and val > max_val:
+                messagebox.showerror(
+                    "Lỗi giá trị",
+                    f"Lỗi: {param_name} phải <= {max_val}\n\nBạn đã nhập: {val}"
+                )
+                return False
+            
+            return True
+            
+        except (ValueError, TypeError, tk.TclError):
+            # Xử lý lỗi khi nhập giá trị không hợp lệ
+            messagebox.showerror(
+                "Lỗi định dạng",
+                f"Lỗi: {param_name} phải là {'số nguyên' if data_type == int else 'số thực'}\n\n"
+                f"Bạn đã nhập giá trị không hợp lệ"
+            )
+            return False
+    
     def _initialize_problem(self):
         """Khởi tạo bài toán TSP mới"""
-        num_cities = self.num_cities_var.get()
-        self.tsp_problem = TSProblem(num_cities=num_cities)
-        
-        # Vẽ bản đồ ban đầu
-        self._draw_map()
-        
-        self.result_text.delete(1.0, tk.END)
-        self.result_text.insert(tk.END, f"Đã tạo bài toán với {num_cities} thành phố\n")
+        try:
+            # Lấy giá trị số thành phố và bắt lỗi ngay
+            try:
+                num_cities = self.num_cities_var.get()
+            except (ValueError, tk.TclError):
+                messagebox.showerror(
+                    "Lỗi định dạng",
+                    "Lỗi: Số thành phố phải là số nguyên\n\nBạn đã nhập giá trị không hợp lệ"
+                )
+                return
+            
+            # Validate số thành phố
+            if not self._validate_input(num_cities, "Số thành phố", min_val=3, max_val=500, data_type=int):
+                return
+            
+            # Cảnh báo cho các trường hợp đặc biệt
+            warning_message = None
+            if num_cities == 3:
+                warning_message = (
+                    "Cảnh báo: Bài toán với 3 thành phố\n\n"
+                    "Với 3 thành phố, chỉ có 1 cách sắp xếp duy nhất (A→B→C→A).\n"
+                    "Thuật toán sẽ tìm được kết quả ngay lập tức mà không cần tối ưu hóa.\n\n"
+                    "Khuyến nghị: Sử dụng >= 5 thành phố để thấy rõ hiệu quả của thuật toán.\n\n"
+                    "Bạn có muốn tiếp tục?"
+                )
+            elif num_cities == 4:
+                warning_message = (
+                    "Cảnh báo: Bài toán với 4 thành phố\n\n"
+                    "Với 4 thành phố, chỉ có 3 cách sắp xếp khác nhau (do tính đối xứng).\n"
+                    "Bài toán này quá đơn giản, có thể thử toàn bộ các trường hợp.\n\n"
+                    "Khuyến nghị: Sử dụng >= 5 thành phố để thuật toán thể hiện hiệu quả.\n\n"
+                    "Bạn có muốn tiếp tục?"
+                )
+            elif num_cities >= 100:
+                warning_message = (
+                    f"Cảnh báo: Bài toán với {num_cities} thành phố\n\n"
+                    f"Số thành phố lớn sẽ ảnh hưởng đến hiệu suất:\n"
+                    f"- Thời gian tính toán sẽ tăng đáng kể\n"
+                    f"- Tiêu tốn nhiều tài nguyên CPU và RAM\n"
+                    f"- Có thể làm máy tính chậm trong quá trình chạy\n"
+                    f"- Giao diện có thể bị lag khi cập nhật đồ thị\n\n"
+                    f"Khuyến nghị: Sử dụng 20-50 thành phố để cân bằng tốc độ và độ phức tạp.\n\n"
+                    f"Bạn có muốn tiếp tục?"
+                )
+            
+            if warning_message:
+                response = messagebox.askyesno("Cảnh báo", warning_message)
+                if not response:
+                    return
+            
+            self.tsp_problem = TSProblem(num_cities=num_cities)
+            
+            # Vẽ bản đồ ban đầu
+            self._draw_map()
+            
+            self.result_text.delete(1.0, tk.END)
+            self.result_text.insert(tk.END, f"Đã tạo bài toán với {num_cities} thành phố\n")
+            
+            # Thêm lưu ý cho các trường hợp đặc biệt
+            if num_cities <= 4:
+                self.result_text.insert(tk.END, f"\nLưu ý: Bài toán với {num_cities} thành phố rất đơn giản.\n")
+                self.result_text.insert(tk.END, f"Thuật toán có thể không thể hiện được hiệu quả tối ưu.\n")
+            elif num_cities >= 50:
+                self.result_text.insert(tk.END, f"\nLưu ý: Số thành phố lớn ({num_cities}) có thể ảnh hưởng:\n")
+                self.result_text.insert(tk.END, f"- Thời gian chạy thuật toán sẽ lâu hơn\n")
+                self.result_text.insert(tk.END, f"- Tiêu tốn nhiều tài nguyên CPU và RAM\n")
+                self.result_text.insert(tk.END, f"- Giao diện có thể lag khi cập nhật đồ thị\n")
+                if num_cities >= 100:
+                    self.result_text.insert(tk.END, f"- Máy có thể bị chậm trong quá trình tính toán\n")
+            
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Không thể tạo bài toán: {str(e)}")
     
     def _draw_map(self, route=None):
         """
@@ -250,6 +362,120 @@ class TSPApplication:
         
         self.root.update()
     
+    def _validate_algorithm_params(self):
+        """
+        Validate các tham số thuật toán trước khi chạy
+        
+        Returns:
+            True nếu tất cả tham số hợp lệ, False nếu không
+        """
+        algorithm_type = self.algorithm_var.get()
+        
+        try:
+            if algorithm_type == "SA":
+                # Validate Simulated Annealing parameters
+                try:
+                    sa_temp = self.sa_temp_var.get()
+                except (ValueError, tk.TclError):
+                    messagebox.showerror(
+                        "Lỗi định dạng",
+                        "Lỗi: Nhiệt độ ban đầu phải là số thực\n\nBạn đã nhập giá trị không hợp lệ"
+                    )
+                    return False
+                
+                if not self._validate_input(sa_temp, "Nhiệt độ ban đầu", 
+                                           min_val=100, max_val=100000, data_type=float):
+                    return False
+                
+                try:
+                    cooling_rate = self.sa_cooling_var.get()
+                except (ValueError, tk.TclError):
+                    messagebox.showerror(
+                        "Lỗi định dạng",
+                        "Lỗi: Tốc độ làm nguội phải là số thực\n\nBạn đã nhập giá trị không hợp lệ"
+                    )
+                    return False
+                
+                if not self._validate_input(cooling_rate, "Tốc độ làm nguội", 
+                                           min_val=0.8, max_val=0.9999, data_type=float):
+                    return False
+                
+                try:
+                    sa_iterations = self.sa_iterations_var.get()
+                except (ValueError, tk.TclError):
+                    messagebox.showerror(
+                        "Lỗi định dạng",
+                        "Lỗi: Số vòng lặp SA phải là số nguyên\n\nBạn đã nhập giá trị không hợp lệ"
+                    )
+                    return False
+                
+                if not self._validate_input(sa_iterations, "Số vòng lặp SA", 
+                                           min_val=100, max_val=100000, data_type=int):
+                    return False
+            
+            else:  # WOA
+                # Validate WOA parameters
+                try:
+                    woa_whales = self.woa_whales_var.get()
+                except (ValueError, tk.TclError):
+                    messagebox.showerror(
+                        "Lỗi định dạng",
+                        "Lỗi: Số cá voi phải là số nguyên\n\nBạn đã nhập giá trị không hợp lệ"
+                    )
+                    return False
+                
+                if not self._validate_input(woa_whales, "Số cá voi", 
+                                           min_val=5, max_val=100, data_type=int):
+                    return False
+                
+                try:
+                    woa_iterations = self.woa_iterations_var.get()
+                except (ValueError, tk.TclError):
+                    messagebox.showerror(
+                        "Lỗi định dạng",
+                        "Lỗi: Số vòng lặp WOA phải là số nguyên\n\nBạn đã nhập giá trị không hợp lệ"
+                    )
+                    return False
+                
+                if not self._validate_input(woa_iterations, "Số vòng lặp WOA", 
+                                           min_val=100, max_val=10000, data_type=int):
+                    return False
+                
+                try:
+                    woa_b = self.woa_b_var.get()
+                except (ValueError, tk.TclError):
+                    messagebox.showerror(
+                        "Lỗi định dạng",
+                        "Lỗi: Hằng số spiral (b) phải là số thực\n\nBạn đã nhập giá trị không hợp lệ"
+                    )
+                    return False
+                
+                if not self._validate_input(woa_b, "Hằng số spiral (b)", 
+                                           min_val=0.1, max_val=10.0, data_type=float):
+                    return False
+                
+                try:
+                    woa_a = self.woa_a_var.get()
+                except (ValueError, tk.TclError):
+                    messagebox.showerror(
+                        "Lỗi định dạng",
+                        "Lỗi: Giá trị a_max phải là số thực\n\nBạn đã nhập giá trị không hợp lệ"
+                    )
+                    return False
+                
+                if not self._validate_input(woa_a, "Giá trị a_max", 
+                                           min_val=0.5, max_val=5.0, data_type=float):
+                    return False
+            
+            return True
+            
+        except Exception as e:
+            messagebox.showerror(
+                "Lỗi",
+                f"Lỗi khi kiểm tra tham số\n\nBạn đã nhập giá trị không hợp lệ"
+            )
+            return False
+    
     def _run_algorithm_thread(self):
         """Chạy thuật toán trong thread riêng"""
         try:
@@ -305,8 +531,26 @@ class TSPApplication:
             
             self.progress_var.set("Hoàn thành!")
             
+        except ValueError as e:
+            messagebox.showerror(
+                "Lỗi giá trị",
+                f"Giá trị tham số không hợp lệ:\n{str(e)}\n\nVui lòng kiểm tra lại các tham số đầu vào."
+            )
+            self.progress_var.set("Lỗi: Giá trị không hợp lệ")
+        except MemoryError:
+            messagebox.showerror(
+                "Lỗi bộ nhớ",
+                "Không đủ bộ nhớ để chạy thuật toán.\n\nHãy thử giảm số thành phố hoặc số vòng lặp."
+            )
+            self.progress_var.set("Lỗi: Không đủ bộ nhớ")
+        except KeyboardInterrupt:
+            self.progress_var.set("Đã dừng bởi người dùng")
         except Exception as e:
-            messagebox.showerror("Lỗi", f"Có lỗi xảy ra: {str(e)}")
+            messagebox.showerror(
+                "Lỗi",
+                f"Có lỗi xảy ra khi chạy thuật toán:\n\n{type(e).__name__}: {str(e)}\n\nVui lòng kiểm tra lại cấu hình."
+            )
+            self.progress_var.set(f"Lỗi: {type(e).__name__}")
         finally:
             self.is_running = False
             self.run_button.config(state=tk.NORMAL)
@@ -314,9 +558,33 @@ class TSPApplication:
     
     def _run_algorithm(self):
         """Bắt đầu chạy thuật toán"""
+        # Kiểm tra bài toán đã được tạo chưa
         if self.tsp_problem is None:
-            messagebox.showwarning("Cảnh báo", "Vui lòng tạo bài toán trước!")
+            messagebox.showwarning(
+                "Cảnh báo",
+                "Vui lòng tạo bài toán trước!\n\nNhấn nút 'Tạo bài toán mới' để bắt đầu."
+            )
             return
+        
+        # Validate các tham số thuật toán
+        if not self._validate_algorithm_params():
+            return
+        
+        # Xác nhận nếu số thành phố quá lớn
+        num_cities = self.tsp_problem.num_cities
+        if num_cities > 80:
+            response = messagebox.askyesno(
+                "Xác nhận",
+                f"Bạn đang chạy thuật toán với {num_cities} thành phố.\n\n"
+                f"Cảnh báo về hiệu suất:\n"
+                f"- Thời gian chạy có thể rất lâu (vài phút đến vài chục phút)\n"
+                f"- Tiêu tốn nhiều CPU và RAM\n"
+                f"- Máy tính có thể bị chậm hoặc lag\n"
+                f"- Giao diện có thể không phản hồi trong quá trình tính\n\n"
+                f"Bạn có muốn tiếp tục không?"
+            )
+            if not response:
+                return
         
         self.is_running = True
         self.run_button.config(state=tk.DISABLED)

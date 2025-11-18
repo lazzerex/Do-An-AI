@@ -21,6 +21,25 @@ class SimulatedAnnealing:
             min_temp: Nhiệt độ tối thiểu
             max_iterations: Số vòng lặp tối đa
         """
+        # Validate parameters
+        if tsp_problem is None:
+            raise ValueError("tsp_problem không được None")
+        
+        if initial_temp <= 0:
+            raise ValueError(f"Nhiệt độ ban đầu phải > 0, nhận được: {initial_temp}")
+        
+        if not 0 < cooling_rate < 1:
+            raise ValueError(f"Tốc độ làm nguội phải trong khoảng (0, 1), nhận được: {cooling_rate}")
+        
+        if min_temp <= 0:
+            raise ValueError(f"Nhiệt độ tối thiểu phải > 0, nhận được: {min_temp}")
+        
+        if min_temp >= initial_temp:
+            raise ValueError(f"Nhiệt độ tối thiểu ({min_temp}) phải < nhiệt độ ban đầu ({initial_temp})")
+        
+        if max_iterations <= 0:
+            raise ValueError(f"Số vòng lặp phải > 0, nhận được: {max_iterations}")
+        
         self.tsp = tsp_problem
         self.initial_temp = initial_temp
         self.cooling_rate = cooling_rate

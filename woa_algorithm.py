@@ -36,6 +36,25 @@ class WOA:
             b: Hằng số xác định hình dạng spiral logarit
             a_max: Giá trị a tối đa (giảm dần từ a_max về 0)
         """
+        # Validate parameters
+        if tsp_problem is None:
+            raise ValueError("tsp_problem không được None")
+        
+        if num_whales < 2:
+            raise ValueError(f"Số cá voi phải >= 2, nhận được: {num_whales}")
+        
+        if num_whales > 200:
+            raise ValueError(f"Số cá voi quá lớn (> 200), nhận được: {num_whales}")
+        
+        if max_iterations <= 0:
+            raise ValueError(f"Số vòng lặp phải > 0, nhận được: {max_iterations}")
+        
+        if b <= 0:
+            raise ValueError(f"Hằng số b phải > 0, nhận được: {b}")
+        
+        if a_max <= 0:
+            raise ValueError(f"Giá trị a_max phải > 0, nhận được: {a_max}")
+        
         self.tsp = tsp_problem
         self.num_whales = num_whales
         self.max_iterations = max_iterations
