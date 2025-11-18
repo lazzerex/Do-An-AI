@@ -185,7 +185,7 @@ class TSPApplication:
         
         # Đánh số thành phố
         for i, (x, y) in enumerate(coords):
-            self.ax_map.annotate(str(i), (x, y), fontsize=8, ha='center', va='bottom')
+            self.ax_map.annotate(str(i), (x, y + 2), fontsize=8, ha='center', va='bottom')
         
         # Vẽ tuyến đường nếu có
         if route is not None:
