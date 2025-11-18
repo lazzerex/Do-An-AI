@@ -23,12 +23,31 @@ Do-An-AI/
 1. Cài đặt Python 3.7 trở lên
 2. Cài đặt các thư viện cần thiết:
 
+**Trên macOS/Linux:**
+```bash
+pip3 install -r requirements.txt
+```
+
+**Trên Windows:**
 ```bash
 pip install -r requirements.txt
 ```
 
 ## Chạy chương trình
 
+**Cách 1: Sử dụng script helper (Khuyến nghị)**
+```bash
+./run.sh
+```
+
+**Cách 2: Chạy trực tiếp**
+
+**Trên macOS/Linux:**
+```bash
+python3 gui_application.py
+```
+
+**Trên Windows:**
 ```bash
 python gui_application.py
 ```
@@ -102,6 +121,29 @@ Mô phỏng hành vi săn mồi của cá voi lưng gù:
 - Có thể thử nghiệm với các tham số khác nhau để tìm cấu hình tốt nhất
 
 ## Xử lý lỗi
+
+### Lỗi khi cài đặt/chạy
+
+1. **Lỗi "command not found: pip" hoặc "command not found: python"**: 
+   - Trên macOS/Linux, sử dụng `pip3` và `python3` thay vì `pip` và `python`
+   
+2. **Lỗi "ModuleNotFoundError"**: 
+   - Chạy lại `pip3 install -r requirements.txt` (macOS/Linux) hoặc `pip install -r requirements.txt` (Windows)
+   
+3. **Lỗi tkinter**: 
+   - Trên Linux có thể cần cài `python3-tk`: `sudo apt-get install python3-tk`
+   - Trên macOS thường đã có sẵn
+   
+4. **Lỗi "macOS 26 required" hoặc "Abort trap: 6"**:
+   - Cập nhật matplotlib: `pip3 install --upgrade matplotlib`
+   - Cài đặt lại dependencies: `pip3 install --upgrade -r requirements.txt`
+   - Nếu vẫn lỗi, thử cập nhật Python lên phiên bản mới hơn
+
+5. **Lỗi import**: 
+   - Đảm bảo đang ở đúng thư mục dự án
+   - Kiểm tra các file `.py` có trong thư mục
+
+### Lỗi khi sử dụng chương trình
 
 Chương trình đã được tích hợp xử lý lỗi toàn diện để đảm bảo trải nghiệm người dùng tốt hơn và tránh các lỗi runtime.
 

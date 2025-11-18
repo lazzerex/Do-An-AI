@@ -3,6 +3,9 @@ Module giao diện GUI cho chương trình giải TSP
 """
 import tkinter as tk
 from tkinter import ttk, messagebox
+import matplotlib
+# Set backend trước khi import pyplot để tránh lỗi trên một số hệ thống
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
