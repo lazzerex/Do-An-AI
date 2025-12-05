@@ -263,6 +263,7 @@ class WOA:
         # Khởi tạo quần thể cá voi
         self._initialize_whales()
         self.history = [(0, self.leader_fitness)]
+        self.actual_iterations = 0  # Track actual completed iterations
         
         # Vòng lặp chính
         for iteration in range(1, self.max_iterations + 1):
@@ -277,6 +278,7 @@ class WOA:
                 # Gọi callback nếu có
                 if callback:
                     callback(self.leader_position, self.leader_fitness, iteration)
+            self.actual_iterations = iteration
         
         # Lưu kết quả cuối cùng
         self.history.append((self.max_iterations, self.leader_fitness))

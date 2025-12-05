@@ -101,6 +101,7 @@ class SimulatedAnnealing:
         
         temp = self.initial_temp
         iteration = 0
+        self.actual_iterations = 0  # Track actual completed iterations
         
         while temp > self.min_temp and iteration < self.max_iterations:
             # Tạo láng giềng
@@ -120,6 +121,7 @@ class SimulatedAnnealing:
             # Làm nguội
             temp *= self.cooling_rate
             iteration += 1
+            self.actual_iterations = iteration
             
             # Lưu lịch sử mỗi 100 iterations
             if iteration % 100 == 0:
