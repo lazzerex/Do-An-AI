@@ -627,22 +627,25 @@ class TSPApplication:
         # Tạo cửa sổ mới
         export_window = tk.Toplevel(self.root)
         export_window.title("Kết quả chi tiết")
-        export_window.geometry("900x700")
+        export_window.geometry("700x700")
         export_window.configure(bg='#f0f0f0')
         
         # Canvas với scrollbar cho toàn bộ nội dung
-        canvas = tk.Canvas(export_window, bg='#f0f0f0')
-        scrollbar = ttk.Scrollbar(export_window, orient="vertical", command=canvas.yview)
+        content_frame = tk.Frame(export_window, bg='#f0f0f0')
+        content_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+
+        canvas = tk.Canvas(content_frame, bg='#f0f0f0', highlightthickness=0)
+        scrollbar = ttk.Scrollbar(content_frame, orient="vertical", command=canvas.yview)
         scrollable_frame = ttk.Frame(canvas)
-        
+
         scrollable_frame.bind(
             "<Configure>",
             lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
         )
-        
+
         canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
-        
+
         canvas.pack(side="left", fill="both", expand=True, padx=10, pady=10)
         scrollbar.pack(side="right", fill="y")
         
@@ -659,8 +662,8 @@ class TSPApplication:
                 font=('Arial', 18, 'bold'), fg='white', bg='#2c3e50').pack()
         
         # Thông tin bài toán
-        info_frame = tk.LabelFrame(scrollable_frame, text="📋 THÔNG TIN BÀI TOÁN", 
-                                   font=style_header, bg='white', padx=15, pady=10)
+        info_frame = tk.LabelFrame(scrollable_frame, text="THÔNG TIN BÀI TOÁN", 
+                       font=style_header, bg='white', padx=15, pady=10)
         info_frame.pack(fill=tk.X, pady=5)
         
         tk.Label(info_frame, text=f"Số thành phố:", font=style_normal, bg='white', anchor='w').grid(row=0, column=0, sticky='w', pady=2)
@@ -668,7 +671,7 @@ class TSPApplication:
         
         # Thông tin thuật toán
         if self.current_algorithm:
-            algo_frame = tk.LabelFrame(scrollable_frame, text="⚙️ THUẬT TOÁN", 
+            algo_frame = tk.LabelFrame(scrollable_frame, text="THUẬT TOÁN", 
                                        font=style_header, bg='white', padx=15, pady=10)
             algo_frame.pack(fill=tk.X, pady=5)
             
@@ -677,7 +680,7 @@ class TSPApplication:
             tk.Label(algo_frame, text=f"{info.get('name', 'N/A')}", font=('Arial', 10, 'bold'), bg='white', fg='#27ae60').grid(row=0, column=1, sticky='w', padx=10)
             
             # Tham số
-            param_frame = tk.LabelFrame(scrollable_frame, text="🔧 THAM SỐ THUẬT TOÁN", 
+            param_frame = tk.LabelFrame(scrollable_frame, text="THAM SỐ THUẬT TOÁN", 
                                         font=style_header, bg='white', padx=15, pady=10)
             param_frame.pack(fill=tk.X, pady=5)
             
@@ -703,8 +706,8 @@ class TSPApplication:
                 row += 1
         
         # Kết quả
-        result_frame = tk.LabelFrame(scrollable_frame, text="🎯 KẾT QUẢ", 
-                                     font=style_header, bg='#ecf0f1', padx=15, pady=10)
+        result_frame = tk.LabelFrame(scrollable_frame, text="KẾT QUẢ", 
+                         font=style_header, bg='#ecf0f1', padx=15, pady=10)
         result_frame.pack(fill=tk.X, pady=5)
         
         tk.Label(result_frame, text="Khoảng cách tốt nhất:", font=style_normal, bg='#ecf0f1', anchor='w').grid(row=0, column=0, sticky='w', pady=2)
@@ -715,8 +718,8 @@ class TSPApplication:
             tk.Label(result_frame, text=f"{self._last_run_time:.2f} giây", font=('Arial', 11, 'bold'), bg='#ecf0f1', fg='#16a085').grid(row=1, column=1, sticky='w', padx=10)
         
         # Tuyến đường
-        route_frame = tk.LabelFrame(scrollable_frame, text="🗺️ TUYẾN ĐƯỜNG ĐẦY ĐỦ", 
-                                    font=style_header, bg='white', padx=15, pady=10)
+        route_frame = tk.LabelFrame(scrollable_frame, text="TUYẾN ĐƯỜNG ĐẦY ĐỦ", 
+                        font=style_header, bg='white', padx=15, pady=10)
         route_frame.pack(fill=tk.BOTH, expand=True, pady=5)
         
         # Text widget với scrollbar cho tuyến đường
@@ -756,18 +759,30 @@ class TSPApplication:
                                            font=style_header, bg='white', padx=15, pady=10)
                 stats_frame.pack(fill=tk.X, pady=5)
                 
+                # Số lần lưu lịch sử (history points)
                 stats_data = [
-                    ("Số vòng lặp thực tế:", len(history)),
+                    ("Số lần lưu lịch sử (history points):", len(history)),
+                ]
+                # Số vòng lặp hoàn thành thực sự (từ thuật toán)
+                actual_iterations = None
+                if hasattr(self.current_algorithm, 'actual_iterations'):
+                    actual_iterations = getattr(self.current_algorithm, 'actual_iterations')
+                elif hasattr(self.current_algorithm, 'iterations'):
+                    actual_iterations = getattr(self.current_algorithm, 'iterations')
+                if actual_iterations is not None:
+                    stats_data.append(("Số vòng lặp hoàn thành thực sự:", actual_iterations))
+
+                stats_data.extend([
                     ("Khoảng cách ban đầu:", f"{history[0][1]:.2f}"),
                     ("Khoảng cách cuối cùng:", f"{history[-1][1]:.2f}"),
-                ]
-                
+                ])
+
                 row = 0
                 for label, value in stats_data:
                     tk.Label(stats_frame, text=label, font=style_normal, bg='white', anchor='w').grid(row=row, column=0, sticky='w', pady=2)
                     tk.Label(stats_frame, text=str(value), font=('Arial', 10, 'bold'), bg='white', fg='#34495e').grid(row=row, column=1, sticky='w', padx=10)
                     row += 1
-                
+
                 improvement = ((history[0][1] - history[-1][1]) / history[0][1]) * 100
                 tk.Label(stats_frame, text="Cải thiện:", font=style_normal, bg='white', anchor='w').grid(row=row, column=0, sticky='w', pady=2)
                 improvement_label = tk.Label(stats_frame, text=f"{improvement:.2f}%", font=('Arial', 12, 'bold'), bg='white', fg='#27ae60')
@@ -815,33 +830,42 @@ class TSPApplication:
         
         content.append("\n" + "=" * 80)
         
-        # Nút sao chép và lưu file
-        button_frame = ttk.Frame(export_window)
-        button_frame.pack(fill=tk.X, padx=10, pady=10)
-        
+
+        # Nút sao chép, lưu file, đóng - căn ngang dưới cùng
         def copy_to_clipboard():
-            self.root.clipboard_clear()
-            self.root.clipboard_append("\n".join(content))
-            messagebox.showinfo("Thành công", "Đã sao chép kết quả vào clipboard!")
-        
+            export_window.clipboard_clear()
+            export_window.clipboard_append("\n".join(content))
+            messagebox.showinfo("Thành công", "Đã sao chép kết quả vào clipboard!", parent=export_window)
+            # Do not close or hide the window
+
         def save_to_file():
             from tkinter import filedialog
             file_path = filedialog.asksaveasfilename(
                 defaultextension=".txt",
                 filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
-                initialfile="ket_qua_tsp.txt"
+                initialfile="ket_qua_tsp.txt",
+                parent=export_window
             )
             if file_path:
                 try:
                     with open(file_path, 'w', encoding='utf-8') as f:
                         f.write("\n".join(content))
-                    messagebox.showinfo("Thành công", f"Đã lưu kết quả vào:\n{file_path}")
+                    messagebox.showinfo("Thành công", f"Đã lưu kết quả vào:\n{file_path}", parent=export_window)
                 except Exception as e:
-                    messagebox.showerror("Lỗi", f"Không thể lưu file:\n{str(e)}")
-        
-        ttk.Button(button_frame, text="Sao chép", command=copy_to_clipboard).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="Lưu file", command=save_to_file).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="Đóng", command=export_window.destroy).pack(side=tk.RIGHT, padx=5)
+                    messagebox.showerror("Lỗi", f"Không thể lưu file:\n{str(e)}", parent=export_window)
+            # Do not close or hide the window
+
+        # Frame chứa các nút, đặt ở dưới cùng, căn trái
+        button_frame = ttk.Frame(export_window)
+        button_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=10, anchor='sw')
+
+        btn_copy = ttk.Button(button_frame, text="Sao chép", command=copy_to_clipboard)
+        btn_save = ttk.Button(button_frame, text="Lưu file", command=save_to_file)
+        btn_close = ttk.Button(button_frame, text="Đóng", command=export_window.destroy)
+
+        btn_copy.pack(side=tk.LEFT, fill=tk.X, padx=(0, 5))
+        btn_save.pack(side=tk.LEFT, fill=tk.X, padx=(0, 5))
+        btn_close.pack(side=tk.LEFT, fill=tk.X)
 
 
 def main():
