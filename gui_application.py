@@ -266,12 +266,10 @@ class TSPApplication:
                 response = messagebox.askyesno("Cảnh báo", warning_message)
                 if not response:
                     return
-            
             self.tsp_problem = TSProblem(num_cities=num_cities)
             
             # Vẽ bản đồ ban đầu
             self._draw_map()
-            
             self.result_text.delete(1.0, tk.END)
             self.result_text.insert(tk.END, f"Đã tạo bài toán với {num_cities} thành phố\n")
             
@@ -286,14 +284,12 @@ class TSPApplication:
                 self.result_text.insert(tk.END, f"- Giao diện có thể lag khi cập nhật đồ thị\n")
                 if num_cities >= 100:
                     self.result_text.insert(tk.END, f"- Máy có thể bị chậm trong quá trình tính toán\n")
-            
         except Exception as e:
             messagebox.showerror("Lỗi", f"Không thể tạo bài toán: {str(e)}")
     
     def _draw_map(self, route=None):
         """
         Vẽ bản đồ thành phố và tuyến đường
-        
         Args:
             route: Tuyến đường cần vẽ (None nếu chỉ vẽ thành phố)
         """
@@ -306,7 +302,7 @@ class TSPApplication:
         # Đánh số thành phố
         for i, (x, y) in enumerate(coords):
             self.ax_map.annotate(str(i), (x, y + 2), fontsize=8, ha='center', va='bottom')
-        
+
         # Vẽ tuyến đường nếu có
         if route is not None:
             for i in range(len(route)):
@@ -315,23 +311,19 @@ class TSPApplication:
                 x1, y1 = coords[city1]
                 x2, y2 = coords[city2]
                 self.ax_map.plot([x1, x2], [y1, y2], 'b-', alpha=0.6, linewidth=1.5)
-        
         self.ax_map.set_title("Bản đồ thành phố và tuyến đường tốt nhất")
         self.ax_map.set_xlabel("X")
         self.ax_map.set_ylabel("Y")
         self.ax_map.grid(True, alpha=0.3)
-        
         self.canvas.draw()
     
     def _draw_convergence(self, history):
         """
         Vẽ đồ thị hội tụ
-        
         Args:
             history: Lịch sử quá trình tìm kiếm [(iteration, distance), ...]
         """
         self.ax_convergence.clear()
-        
         if len(history) > 0:
             iterations, distances = zip(*history)
             self.ax_convergence.plot(iterations, distances, 'b-', linewidth=2)
@@ -339,9 +331,7 @@ class TSPApplication:
             self.ax_convergence.set_xlabel("Iteration")
             self.ax_convergence.set_ylabel("Distance")
             self.ax_convergence.grid(True, alpha=0.3)
-        
         self.canvas.draw()
-    
     def _update_callback(self, route, distance, iteration):
         """
         Callback để cập nhật giao diện trong quá trình chạy thuật toán
@@ -353,32 +343,24 @@ class TSPApplication:
         """
         if not self.is_running:
             return
-        
         self.best_route = route
         self.best_distance = distance
-        
         # Cập nhật progress
         self.progress_var.set(f"Iteration: {iteration} | Distance: {distance:.2f}")
-        
         # Cập nhật bản đồ
         self._draw_map(route)
-        
         # Cập nhật đồ thị hội tụ
         if self.current_algorithm:
             if hasattr(self.current_algorithm, 'history'):
                 self._draw_convergence(self.current_algorithm.history)
-        
         self.root.update()
-    
     def _validate_algorithm_params(self):
         """
         Validate các tham số thuật toán trước khi chạy
-        
         Returns:
             True nếu tất cả tham số hợp lệ, False nếu không
         """
         algorithm_type = self.algorithm_var.get()
-        
         try:
             if algorithm_type == "SA":
                 # Validate Simulated Annealing parameters
@@ -390,11 +372,9 @@ class TSPApplication:
                         "Lỗi: Nhiệt độ ban đầu phải là số thực\n\nBạn đã nhập giá trị không hợp lệ"
                     )
                     return False
-                
                 if not self._validate_input(sa_temp, "Nhiệt độ ban đầu", 
                                            min_val=100, max_val=100000, data_type=float):
                     return False
-                
                 try:
                     cooling_rate = self.sa_cooling_var.get()
                 except (ValueError, tk.TclError):
@@ -403,11 +383,9 @@ class TSPApplication:
                         "Lỗi: Tốc độ làm nguội phải là số thực\n\nBạn đã nhập giá trị không hợp lệ"
                     )
                     return False
-                
                 if not self._validate_input(cooling_rate, "Tốc độ làm nguội", 
                                            min_val=0.8, max_val=0.9999, data_type=float):
                     return False
-                
                 try:
                     sa_iterations = self.sa_iterations_var.get()
                 except (ValueError, tk.TclError):
@@ -416,11 +394,9 @@ class TSPApplication:
                         "Lỗi: Số vòng lặp SA phải là số nguyên\n\nBạn đã nhập giá trị không hợp lệ"
                     )
                     return False
-                
                 if not self._validate_input(sa_iterations, "Số vòng lặp SA", 
                                            min_val=100, max_val=100000, data_type=int):
                     return False
-            
             else:  # WOA
                 # Validate WOA parameters
                 try:
@@ -431,11 +407,9 @@ class TSPApplication:
                         "Lỗi: Số cá voi phải là số nguyên\n\nBạn đã nhập giá trị không hợp lệ"
                     )
                     return False
-                
                 if not self._validate_input(woa_whales, "Số cá voi", 
                                            min_val=5, max_val=100, data_type=int):
                     return False
-                
                 try:
                     woa_iterations = self.woa_iterations_var.get()
                 except (ValueError, tk.TclError):
@@ -444,11 +418,9 @@ class TSPApplication:
                         "Lỗi: Số vòng lặp WOA phải là số nguyên\n\nBạn đã nhập giá trị không hợp lệ"
                     )
                     return False
-                
                 if not self._validate_input(woa_iterations, "Số vòng lặp WOA", 
                                            min_val=100, max_val=10000, data_type=int):
                     return False
-                
                 try:
                     woa_b = self.woa_b_var.get()
                 except (ValueError, tk.TclError):
@@ -457,11 +429,9 @@ class TSPApplication:
                         "Lỗi: Hằng số spiral (b) phải là số thực\n\nBạn đã nhập giá trị không hợp lệ"
                     )
                     return False
-                
                 if not self._validate_input(woa_b, "Hằng số spiral (b)", 
                                            min_val=0.1, max_val=10.0, data_type=float):
                     return False
-                
                 try:
                     woa_a = self.woa_a_var.get()
                 except (ValueError, tk.TclError):
@@ -470,11 +440,9 @@ class TSPApplication:
                         "Lỗi: Giá trị a_max phải là số thực\n\nBạn đã nhập giá trị không hợp lệ"
                     )
                     return False
-                
                 if not self._validate_input(woa_a, "Giá trị a_max", 
                                            min_val=0.5, max_val=5.0, data_type=float):
                     return False
-            
             return True
             
         except Exception as e:
@@ -835,7 +803,6 @@ class TSPApplication:
                 content.append(f"Cải thiện: {improvement:.2f}%")
         
         content.append("\n" + "=" * 80)
-        
 
         # Nút sao chép, lưu file, đóng - căn ngang dưới cùng
         def copy_to_clipboard():
@@ -860,7 +827,6 @@ class TSPApplication:
                 except Exception as e:
                     messagebox.showerror("Lỗi", f"Không thể lưu file:\n{str(e)}", parent=export_window)
             # Do not close or hide the window
-
         # Frame chứa các nút, đặt ở dưới cùng, căn trái
         button_frame = ttk.Frame(export_window)
         button_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=10, anchor='sw')
@@ -873,13 +839,11 @@ class TSPApplication:
         btn_save.pack(side=tk.LEFT, fill=tk.X, padx=(0, 5))
         btn_close.pack(side=tk.LEFT, fill=tk.X)
 
-
 def main():
     """Hàm main để chạy ứng dụng"""
     root = tk.Tk()
     app = TSPApplication(root)
     root.mainloop()
-
 
 if __name__ == "__main__":
     main()
