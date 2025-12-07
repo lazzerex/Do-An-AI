@@ -30,6 +30,7 @@ class TSPApplication:
         self.root = root
         self.root.title("Giải bài toán Travelling Salesman Problem")
         self.root.geometry("1400x800")
+        self.root.resizable(False, False)
         
         # Biến lưu trữ
         self.tsp_problem = None
@@ -632,6 +633,7 @@ class TSPApplication:
         export_window.title("Kết quả chi tiết")
         export_window.geometry("700x700")
         export_window.configure(bg='#f0f0f0')
+        export_window.resizable(False, False)
         
         # Canvas với scrollbar cho toàn bộ nội dung
         content_frame = tk.Frame(export_window, bg='#f0f0f0')
@@ -693,7 +695,8 @@ class TSPApplication:
                 params = [
                     ("Nhiệt độ ban đầu:", self.sa_temp_var.get()),
                     ("Tốc độ làm nguội:", self.sa_cooling_var.get()),
-                    ("Số vòng lặp:", self.sa_iterations_var.get())
+                    ("Sô vòng lặp đã chạy:", self.current_algorithm.actual_iterations if hasattr(self.current_algorithm, 'actual_iterations') else self.sa_iterations_var.get()),
+                    ("Số vòng lặp tối đa:", self.sa_iterations_var.get())
                 ]
             else:  # WOA
                 params = [
